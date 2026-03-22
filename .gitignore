@@ -1,0 +1,25 @@
+# Solutions (keep private)
+Solution/
+Solution_backup/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Old folders (pre-reorganization, top-level only)
+/Lectures/
+/Assignment/
+/data/
+/img/
+
+# Claude config
+.claude/
+
+# Jupyter Book build
+_build/
