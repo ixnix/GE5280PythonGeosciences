@@ -21,7 +21,7 @@ This course introduces Python as a versatile programming language for geoscience
 | 11 | Lambda Functions | `11_LambdaFunction.ipynb` | Assignment 11 |
 | 12 | Object-Oriented Programming | `12_OOP.ipynb` | Assignment 12 |
 | 13 | Cartopy | `13_Cartopy.ipynb` | Assignment 13 |
-| 14 | Seaborn | `14_Seaborn.ipynb` | Assignments 14 |
+| 14 | Seaborn | `14_Seaborn.ipynb` | Assignment 14 |
 
 ## Getting Started
 
