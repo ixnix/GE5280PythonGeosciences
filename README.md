@@ -60,9 +60,10 @@ Each module folder contains:
 
 ## Acknowledgments
 
-The recommended reference textbook for this course:
+This course was developed building upon the following open educational resources:
 
-- [**Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython**](https://wesmckinney.com/book/) by Wes McKinney (O'Reilly Media).
+- [**Python for Earth Science Students**](https://github.com/ltauxe/Python-for-Earth-Science-Students) by Lisa Tauxe and contributors. Many of the lecture notebooks and exercises in this course are adapted from this excellent open-source curriculum.
+- [**Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython**](https://wesmckinney.com/book/) by Wes McKinney (O'Reilly Media). Foundational reference for the Pandas and data wrangling portions of the course.
 
 ## License
 
