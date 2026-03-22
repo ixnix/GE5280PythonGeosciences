@@ -1,0 +1,19 @@
+format: jb-book
+root: README
+
+chapters:
+  - file: module_1/Syllabus
+  - file: module_1/1_Overview
+  - file: module_2/2_Variables
+  - file: module_3/3_DataStructure
+  - file: module_4/4_ControlFlow
+  - file: module_5/5_Functions
+  - file: module_6/6_Numpy
+  - file: module_7/7_PandasDataStructure
+  - file: module_8/8_DataWrangling
+  - file: module_9/9_DataAggregation
+  - file: module_10/10_TimeSeries
+  - file: module_11/11_LambdaFunction
+  - file: module_12/12_OOP
+  - file: module_13/13_Cartopy
+  - file: module_14/14_Seaborn

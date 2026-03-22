@@ -1,0 +1,38 @@
+title: "GE5280: Python Programming for Geosciences"
+author: Xin Xi
+copyright: "2026"
+logo: ""
+
+execute:
+  execute_notebooks: "off"
+
+parse:
+  myst_enable_extensions:
+    - colon_fence
+    - dollarmath
+
+html:
+  use_issues_button: false
+  use_repository_button: true
+  use_edit_page_button: false
+  home_page_in_navbar: false
+
+repository:
+  url: https://github.com/ixnix/GE5280PythonGeosciences
+  branch: main
+
+sphinx:
+  config:
+    html_show_copyright: true
+    suppress_warnings: ["myst.header"]
+
+exclude_patterns:
+  - "Assignment/*"
+  - "Lectures/*"
+  - "Solution/*"
+  - "Solution_backup/*"
+  - "data/*"
+  - "img/*"
+  - "_build/*"
+  - ".claude/*"
+  - "module_*/Assignment_*.ipynb"
