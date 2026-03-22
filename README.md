@@ -6,7 +6,7 @@ This course introduces Python as a versatile programming language for geoscience
 
 ## Modules
 
-| Module | Topic | Lecture Notebook | Assignment(s) |
+| Module | Topic | Lecture Notebook | Assignment |
 |--------|-------|------------------|---------------|
 | 1 | Course Overview | `1_Overview.ipynb`, `Syllabus.ipynb` | Assignment 1 |
 | 2 | Variables | `2_Variables.ipynb` | Assignment 2 |
