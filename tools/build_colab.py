@@ -69,3 +69,17 @@ def rewrite_markdown_paths(source: str, module: int) -> str:
     out = _MD_IMAGE_RE.sub(_md_sub, source)
     out = _HTML_IMG_RE.sub(_html_sub, out)
     return out
+
+
+def strip_widgets_metadata(nb) -> None:
+    """Remove the 'widgets' notebook-level metadata key, a legacy JupyterLab
+    artifact that can crash Colab's renderer."""
+    nb.metadata.pop("widgets", None)
+
+
+def clear_outputs(nb) -> None:
+    """Clear outputs and execution counts from all code cells."""
+    for cell in nb.cells:
+        if cell.cell_type == "code":
+            cell.outputs = []
+            cell.execution_count = None
