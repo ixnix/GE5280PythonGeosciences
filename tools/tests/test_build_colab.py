@@ -269,3 +269,41 @@ def test_landing_page_has_open_in_colab_links():
 def test_landing_page_mentions_syllabus():
     md = build_landing_page()
     assert "Syllabus.ipynb" in md
+
+
+import subprocess
+import sys
+from pathlib import Path
+from tools.build_colab import build_all
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_build_all_produces_expected_files(tmp_path):
+    build_all(
+        repo_root=REPO_ROOT,
+        output_dir=tmp_path,
+        only_module=None,
+    )
+    assert (tmp_path / "README.md").exists()
+    for m in MODULES:
+        num = m["number"]
+        assert (tmp_path / f"module_{num}" / m["lecture"]).exists()
+        assert (tmp_path / f"module_{num}" / f"Assignment_{num}.ipynb").exists()
+    assert (tmp_path / "module_1" / "Syllabus.ipynb").exists()
+
+
+def test_build_all_only_module(tmp_path):
+    build_all(repo_root=REPO_ROOT, output_dir=tmp_path, only_module=2)
+    assert (tmp_path / "module_2" / "2_Variables.ipynb").exists()
+    assert not (tmp_path / "module_3").exists()
+
+
+def test_cli_dry_run_writes_nothing(tmp_path):
+    result = subprocess.run(
+        [sys.executable, "-m", "tools.build_colab",
+         "--dry-run", "--output-dir", str(tmp_path)],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not any(tmp_path.iterdir())
