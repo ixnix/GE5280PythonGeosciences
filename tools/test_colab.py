@@ -54,3 +54,32 @@ def looks_like_private_repo(results) -> bool:
         return False
     failures = sum(1 for ok in raw if not ok)
     return failures > len(raw) / 2
+
+
+import subprocess
+import sys as _sys
+
+
+def _venv_python(venv_dir: Path) -> Path:
+    if _sys.platform == "win32":
+        return venv_dir / "Scripts" / "python.exe"
+    return venv_dir / "bin" / "python"
+
+
+def ensure_venv(venv_dir: Path, requirements: Path) -> Path:
+    """Create the Colab-like venv and install requirements if not present.
+    Returns the path to the venv's python interpreter."""
+    python = _venv_python(venv_dir)
+    if python.exists():
+        return python
+
+    venv_dir.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [_sys.executable, "-m", "venv", str(venv_dir)],
+        check=True,
+    )
+    subprocess.run(
+        [str(python), "-m", "pip", "install", "-q", "-r", str(requirements)],
+        check=True,
+    )
+    return python
