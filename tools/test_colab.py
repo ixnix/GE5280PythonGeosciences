@@ -83,3 +83,32 @@ def ensure_venv(venv_dir: Path, requirements: Path) -> Path:
         check=True,
     )
     return python
+
+
+from dataclasses import dataclass
+
+
+@dataclass
+class ExecutionResult:
+    notebook: Path
+    ok: bool
+    error: str
+
+
+def execute_notebook(notebook: Path, *, python: Path, timeout: int) -> ExecutionResult:
+    """Run a notebook with `nbconvert --execute` using the given python.
+    Returns ExecutionResult(ok, error)."""
+    cmd = [
+        str(python), "-m", "nbconvert",
+        "--to", "notebook",
+        "--execute",
+        "--output", f"/tmp/exec_{notebook.stem}.ipynb",
+        f"--ExecutePreprocessor.timeout={timeout}",
+        str(notebook),
+    ]
+    completed = subprocess.run(cmd, capture_output=True, text=True)
+    if completed.returncode == 0:
+        return ExecutionResult(notebook=notebook, ok=True, error="")
+    err = completed.stderr.strip().splitlines()
+    first = err[-1] if err else "unknown execution error"
+    return ExecutionResult(notebook=notebook, ok=False, error=first)
