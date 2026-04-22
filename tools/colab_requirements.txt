@@ -1,0 +1,15 @@
+# Versions pinned to approximate Google Colab defaults as of 2026-04-21.
+# To bump, open a fresh Colab notebook and run the version-check snippet
+# in tools/README.md, then update the pins below.
+numpy==2.0.2
+pandas==2.2.2
+matplotlib==3.9.2
+seaborn==0.13.2
+scipy==1.14.1
+ipython==8.18.1
+# Jupyter ecosystem — stable versions, don't need to exactly match Colab.
+jupyter==1.1.1
+nbconvert==7.16.4
+nbformat==5.10.4
+# Module 13 only.
+cartopy==0.24.0
