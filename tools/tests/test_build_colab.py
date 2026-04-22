@@ -7,6 +7,7 @@ from tools.build_colab import (
     rewrite_markdown_paths,
     strip_widgets_metadata,
     clear_outputs,
+    build_header_cell,
 )
 
 
@@ -131,3 +132,29 @@ def test_clear_outputs_empties_code_cell_outputs():
     clear_outputs(nb)
     assert nb.cells[0].outputs == []
     assert nb.cells[0].execution_count is None
+
+
+def test_header_cell_is_markdown():
+    cell = build_header_cell(module=7, notebook_name="7_PandasDataStructure.ipynb",
+                             title="Pandas Data Structures")
+    assert cell.cell_type == "markdown"
+
+
+def test_header_cell_contains_title():
+    cell = build_header_cell(module=7, notebook_name="7_PandasDataStructure.ipynb",
+                             title="Pandas Data Structures")
+    assert "# Pandas Data Structures" in cell.source
+
+
+def test_header_cell_contains_colab_badge():
+    cell = build_header_cell(module=13, notebook_name="13_Cartopy.ipynb",
+                             title="Cartopy")
+    assert "colab.research.google.com/github/ixnix/" in cell.source
+    assert "colab/module_13/13_Cartopy.ipynb" in cell.source
+    assert "colab-badge.svg" in cell.source
+
+
+def test_header_cell_mentions_zero_setup():
+    cell = build_header_cell(module=1, notebook_name="1_Overview.ipynb",
+                             title="Course Overview")
+    assert "Google Colab" in cell.source
