@@ -2,6 +2,7 @@ from tools.build_colab import (
     build_raw_url,
     build_colab_open_url,
     rewrite_code_string_paths,
+    rewrite_markdown_paths,
 )
 
 
@@ -65,3 +66,35 @@ def test_rewrite_multiple_occurrences():
     out = rewrite_code_string_paths(src, module=9)
     assert "module_9/data/one.csv" in out
     assert "module_9/img/two.png" in out
+
+
+def test_rewrite_markdown_image():
+    src = "Here's a picture:\n\n![diagram](img/foo.png)\n"
+    out = rewrite_markdown_paths(src, module=7)
+    assert "module_7/img/foo.png" in out
+    assert "![diagram](https://raw" in out
+
+
+def test_rewrite_markdown_data_link():
+    src = "See [data](data/things.csv) for details."
+    out = rewrite_markdown_paths(src, module=8)
+    assert "module_8/data/things.csv" in out
+
+
+def test_rewrite_html_img_tag_double_quoted():
+    src = '<img src="img/bar.jpg" width="300">'
+    out = rewrite_markdown_paths(src, module=1)
+    assert 'src="https://raw' in out
+    assert "module_1/img/bar.jpg" in out
+
+
+def test_rewrite_html_img_tag_single_quoted():
+    src = "<img src='img/bar.jpg'>"
+    out = rewrite_markdown_paths(src, module=1)
+    assert "src='https://raw" in out
+
+
+def test_rewrite_markdown_leaves_prose_alone():
+    src = "The data/ folder contains CSV files."
+    out = rewrite_markdown_paths(src, module=7)
+    assert out == src

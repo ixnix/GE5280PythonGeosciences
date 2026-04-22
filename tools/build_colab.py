@@ -43,3 +43,29 @@ def rewrite_code_string_paths(source: str, module: int) -> str:
         return f"{quote}{url}{quote}"
 
     return _PATH_RE.sub(_sub, source)
+
+
+_MD_IMAGE_RE = re.compile(r"""(\!?\[[^\]]*\])\((data|img)/([^\s)]+)\)""")
+
+_HTML_IMG_RE = re.compile(
+    r"""(<img\s[^>]*?src\s*=\s*)(['"])(data|img)/([^'"\s]+)\2""",
+    flags=re.IGNORECASE,
+)
+
+
+def rewrite_markdown_paths(source: str, module: int) -> str:
+    """Rewrite markdown image/link references and HTML <img src=> tags
+    that point at 'data/...' or 'img/...' to GitHub raw URLs."""
+    def _md_sub(m: "re.Match") -> str:
+        prefix, subdir, rest = m.group(1), m.group(2), m.group(3)
+        url = build_raw_url(module, f"{subdir}/{rest}")
+        return f"{prefix}({url})"
+
+    def _html_sub(m: "re.Match") -> str:
+        attr, quote, subdir, rest = m.group(1), m.group(2), m.group(3), m.group(4)
+        url = build_raw_url(module, f"{subdir}/{rest}")
+        return f"{attr}{quote}{url}{quote}"
+
+    out = _MD_IMAGE_RE.sub(_md_sub, source)
+    out = _HTML_IMG_RE.sub(_html_sub, out)
+    return out
