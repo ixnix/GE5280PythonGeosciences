@@ -1,6 +1,8 @@
+from unittest.mock import patch, Mock
+
 import nbformat
 from pathlib import Path
-from tools.test_colab import extract_urls
+from tools.test_colab import extract_urls, check_url_reachable
 
 
 def test_extract_urls_from_code_cell(tmp_path):
@@ -36,3 +38,33 @@ def test_extract_urls_deduplicates(tmp_path):
     nbformat.write(nb, path)
     urls = extract_urls(path)
     assert urls.count(url) == 1
+
+
+def test_check_url_ok_head():
+    resp = Mock(status_code=200)
+    with patch("tools.test_colab.requests.head", return_value=resp) as mhead:
+        assert check_url_reachable("https://x/y.csv") is True
+        mhead.assert_called_once()
+
+
+def test_check_url_falls_back_to_get_on_405():
+    head_resp = Mock(status_code=405)
+    get_resp = Mock(status_code=200)
+    with patch("tools.test_colab.requests.head", return_value=head_resp), \
+         patch("tools.test_colab.requests.get", return_value=get_resp) as mget:
+        assert check_url_reachable("https://x/y.csv") is True
+        mget.assert_called_once()
+
+
+def test_check_url_404_is_false():
+    resp = Mock(status_code=404)
+    with patch("tools.test_colab.requests.head", return_value=resp):
+        assert check_url_reachable("https://x/y.csv") is False
+
+
+def test_check_url_retries_once_on_exception():
+    import requests as _requests
+    side_effects = [_requests.ConnectionError("flake"), Mock(status_code=200)]
+    with patch("tools.test_colab.requests.head", side_effect=side_effects) as mhead:
+        assert check_url_reachable("https://x/y.csv") is True
+        assert mhead.call_count == 2

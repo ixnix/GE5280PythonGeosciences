@@ -26,3 +26,21 @@ def extract_urls(notebook_path: Path):
                 seen.add(url)
                 ordered.append(url)
     return ordered
+
+
+import requests
+
+
+def check_url_reachable(url: str, *, timeout: float = 10.0) -> bool:
+    """HEAD the URL, falling back to GET if HEAD is rejected.
+    One retry on connection error. Returns True on 2xx, False otherwise."""
+    for attempt in range(2):
+        try:
+            resp = requests.head(url, allow_redirects=True, timeout=timeout)
+            if resp.status_code == 405:
+                resp = requests.get(url, stream=True, timeout=timeout)
+            return 200 <= resp.status_code < 300
+        except requests.RequestException:
+            if attempt == 1:
+                return False
+    return False
