@@ -2,7 +2,12 @@ from unittest.mock import patch, Mock
 
 import nbformat
 from pathlib import Path
-from tools.test_colab import extract_urls, check_url_reachable, looks_like_private_repo
+from tools.test_colab import (
+    extract_urls,
+    check_url_reachable,
+    looks_like_private_repo,
+    ensure_venv,
+)
 
 
 def test_extract_urls_from_code_cell(tmp_path):
@@ -95,3 +100,30 @@ def test_private_repo_banner_ignores_non_raw_urls():
         ("https://example.com/b", False),
     ]
     assert looks_like_private_repo(results) is False
+
+
+def test_ensure_venv_skips_when_exists(tmp_path):
+    venv_dir = tmp_path / ".venv"
+    venv_dir.mkdir()
+    (venv_dir / "bin").mkdir()
+    (venv_dir / "bin" / "python").touch()
+    with patch("tools.test_colab.subprocess.run") as mrun:
+        ensure_venv(venv_dir=venv_dir, requirements=tmp_path / "req.txt")
+        mrun.assert_not_called()
+
+
+def test_ensure_venv_creates_and_installs(tmp_path):
+    venv_dir = tmp_path / ".venv"
+    req = tmp_path / "req.txt"
+    req.write_text("numpy==2.0.0\n")
+
+    def fake_run(cmd, *args, **kwargs):
+        if "venv" in cmd:
+            (venv_dir / "bin").mkdir(parents=True, exist_ok=True)
+            (venv_dir / "bin" / "python").touch()
+        from types import SimpleNamespace
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    with patch("tools.test_colab.subprocess.run", side_effect=fake_run) as mrun:
+        ensure_venv(venv_dir=venv_dir, requirements=req)
+        assert mrun.call_count == 2
