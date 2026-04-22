@@ -7,6 +7,8 @@ from tools.test_colab import (
     check_url_reachable,
     looks_like_private_repo,
     ensure_venv,
+    execute_notebook,
+    ExecutionResult,
 )
 
 
@@ -127,3 +129,28 @@ def test_ensure_venv_creates_and_installs(tmp_path):
     with patch("tools.test_colab.subprocess.run", side_effect=fake_run) as mrun:
         ensure_venv(venv_dir=venv_dir, requirements=req)
         assert mrun.call_count == 2
+
+
+def test_execute_notebook_success(tmp_path):
+    nb_path = tmp_path / "n.ipynb"
+    nb_path.write_text("{}")
+    from types import SimpleNamespace
+    fake_result = SimpleNamespace(returncode=0, stdout="", stderr="")
+    with patch("tools.test_colab.subprocess.run", return_value=fake_result):
+        res = execute_notebook(nb_path, python=Path("/fake/python"), timeout=120)
+    assert isinstance(res, ExecutionResult)
+    assert res.ok is True
+    assert res.error == ""
+
+
+def test_execute_notebook_failure_captures_stderr(tmp_path):
+    nb_path = tmp_path / "n.ipynb"
+    nb_path.write_text("{}")
+    from types import SimpleNamespace
+    fake_result = SimpleNamespace(
+        returncode=1, stdout="", stderr="CellExecutionError: NameError: 'foo'\n"
+    )
+    with patch("tools.test_colab.subprocess.run", return_value=fake_result):
+        res = execute_notebook(nb_path, python=Path("/fake/python"), timeout=120)
+    assert res.ok is False
+    assert "NameError" in res.error
