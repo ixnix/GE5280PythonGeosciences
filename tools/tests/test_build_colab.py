@@ -12,6 +12,8 @@ from tools.build_colab import (
     transform_notebook,
     collect_referenced_paths,
     validate_references,
+    build_landing_page,
+    MODULES,
 )
 
 import pytest
@@ -244,3 +246,26 @@ def test_validate_references_passes_when_present(tmp_path):
     (module_dir / "data").mkdir(parents=True)
     (module_dir / "data" / "x.csv").write_text("")
     validate_references({"data/x.csv"}, module_dir)
+
+
+def test_modules_list_is_complete():
+    assert len(MODULES) == 14
+    assert MODULES[0]["number"] == 1
+    assert MODULES[13]["number"] == 14
+
+
+def test_landing_page_has_all_modules():
+    md = build_landing_page()
+    for i in range(1, 15):
+        assert f"module_{i}/" in md
+
+
+def test_landing_page_has_open_in_colab_links():
+    md = build_landing_page()
+    assert md.count("colab.research.google.com/github/ixnix") >= 28
+    assert "colab/module_13/13_Cartopy.ipynb" in md
+
+
+def test_landing_page_mentions_syllabus():
+    md = build_landing_page()
+    assert "Syllabus.ipynb" in md

@@ -161,3 +161,73 @@ def validate_references(refs, module_dir: Path) -> None:
         raise FileNotFoundError(
             f"{module_dir}: referenced file(s) missing: {sorted(missing)}"
         )
+
+
+MODULES = [
+    {"number": 1, "title": "Course Overview",
+     "lecture": "1_Overview.ipynb", "extras": ["Syllabus.ipynb"]},
+    {"number": 2, "title": "Variables",
+     "lecture": "2_Variables.ipynb"},
+    {"number": 3, "title": "Data Structures",
+     "lecture": "3_DataStructure.ipynb"},
+    {"number": 4, "title": "Control Flow",
+     "lecture": "4_ControlFlow.ipynb"},
+    {"number": 5, "title": "Functions",
+     "lecture": "5_Functions.ipynb"},
+    {"number": 6, "title": "NumPy",
+     "lecture": "6_Numpy.ipynb"},
+    {"number": 7, "title": "Pandas Data Structures",
+     "lecture": "7_PandasDataStructure.ipynb"},
+    {"number": 8, "title": "Data Wrangling",
+     "lecture": "8_DataWrangling.ipynb"},
+    {"number": 9, "title": "Data Aggregation",
+     "lecture": "9_DataAggregation.ipynb"},
+    {"number": 10, "title": "Time Series",
+     "lecture": "10_TimeSeries.ipynb"},
+    {"number": 11, "title": "Lambda Functions",
+     "lecture": "11_LambdaFunction.ipynb"},
+    {"number": 12, "title": "Object-Oriented Programming",
+     "lecture": "12_OOP.ipynb"},
+    {"number": 13, "title": "Cartopy",
+     "lecture": "13_Cartopy.ipynb"},
+    {"number": 14, "title": "Seaborn",
+     "lecture": "14_Seaborn.ipynb"},
+]
+
+
+def _colab_link(module: int, notebook: str) -> str:
+    url = build_colab_open_url(module, notebook)
+    return f"[Open in Colab]({url})"
+
+
+def build_landing_page() -> str:
+    lines = [
+        "# GE5280 — Run in Google Colab",
+        "",
+        "This directory contains Colab-ready copies of all course notebooks.",
+        "Click any **Open in Colab** link below to launch the notebook in",
+        "Google Colab. You need a free Google account; the free Colab tier is",
+        "more than enough for this course. No local installation required.",
+        "",
+        "The original notebooks in `module_*/` are unchanged — this folder is",
+        "a generated mirror. For module 13 (Cartopy), Colab will spend an",
+        "extra 30–60 seconds installing the package on first cell run.",
+        "",
+        "| Module | Topic | Lecture | Assignment |",
+        "|--------|-------|---------|------------|",
+    ]
+    for m in MODULES:
+        num = m["number"]
+        lecture_link = _colab_link(num, m["lecture"])
+        assign_name = f"Assignment_{num}.ipynb"
+        assign_link = _colab_link(num, assign_name)
+        lines.append(
+            f"| {num} | {m['title']} | {lecture_link} | {assign_link} |"
+        )
+        for extra in m.get("extras", []):
+            extra_link = _colab_link(num, extra)
+            lines.append(
+                f"| {num} | {m['title']} ({extra[:-6]}) | {extra_link} | — |"
+            )
+    lines.append("")
+    return "\n".join(lines)
