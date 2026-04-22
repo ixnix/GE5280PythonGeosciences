@@ -112,3 +112,30 @@ def execute_notebook(notebook: Path, *, python: Path, timeout: int) -> Execution
     err = completed.stderr.strip().splitlines()
     first = err[-1] if err else "unknown execution error"
     return ExecutionResult(notebook=notebook, ok=False, error=first)
+
+
+def format_report(url_results, exec_results) -> str:
+    lines = ["# Colab Tester Report", ""]
+
+    if url_results:
+        lines.append("## URL reachability")
+        lines.append("")
+        lines.append("| URL | Status |")
+        lines.append("|-----|--------|")
+        for url, ok in url_results:
+            status = "PASS" if ok else "**FAIL**"
+            lines.append(f"| `{url}` | {status} |")
+        lines.append("")
+
+    if exec_results:
+        lines.append("## Notebook execution")
+        lines.append("")
+        lines.append("| Notebook | Exec | Error |")
+        lines.append("|----------|------|-------|")
+        for r in exec_results:
+            status = "PASS" if r.ok else "**FAIL**"
+            err = r.error.replace("|", "\\|")
+            lines.append(f"| `{r.notebook}` | {status} | {err} |")
+        lines.append("")
+
+    return "\n".join(lines)

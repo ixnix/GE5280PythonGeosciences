@@ -9,6 +9,7 @@ from tools.test_colab import (
     ensure_venv,
     execute_notebook,
     ExecutionResult,
+    format_report,
 )
 
 
@@ -154,3 +155,30 @@ def test_execute_notebook_failure_captures_stderr(tmp_path):
         res = execute_notebook(nb_path, python=Path("/fake/python"), timeout=120)
     assert res.ok is False
     assert "NameError" in res.error
+
+
+def test_report_has_header_row():
+    md = format_report(url_results=[], exec_results=[])
+    assert "Colab Tester Report" in md
+
+
+def test_report_marks_url_failures():
+    md = format_report(
+        url_results=[("https://a.com", False), ("https://b.com", True)],
+        exec_results=[],
+    )
+    assert "FAIL" in md
+    assert "https://a.com" in md
+
+
+def test_report_marks_exec_failures():
+    results = [
+        ExecutionResult(notebook=Path("colab/module_3/x.ipynb"),
+                        ok=False, error="NameError: 'foo'"),
+        ExecutionResult(notebook=Path("colab/module_4/y.ipynb"),
+                        ok=True, error=""),
+    ]
+    md = format_report(url_results=[], exec_results=results)
+    assert "module_3/x.ipynb" in md
+    assert "NameError" in md
+    assert "PASS" in md
