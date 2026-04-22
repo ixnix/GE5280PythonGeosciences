@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 
+import nbformat
+
 GITHUB_OWNER = "ixnix"
 GITHUB_REPO = "GE5280PythonGeosciences"
 GITHUB_BRANCH = "main"
@@ -83,3 +85,17 @@ def clear_outputs(nb) -> None:
         if cell.cell_type == "code":
             cell.outputs = []
             cell.execution_count = None
+
+
+def build_header_cell(module: int, notebook_name: str, title: str):
+    """Build the injected header markdown cell with the Open-in-Colab badge."""
+    colab_url = build_colab_open_url(module, notebook_name)
+    badge = "https://colab.research.google.com/assets/colab-badge.svg"
+    source = (
+        f"# {title}\n"
+        "\n"
+        f"[![Open In Colab]({badge})]({colab_url})\n"
+        "\n"
+        "*Run this notebook on Google Colab — no setup required.*"
+    )
+    return nbformat.v4.new_markdown_cell(source)
