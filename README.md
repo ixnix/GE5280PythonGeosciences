@@ -4,6 +4,10 @@
 
 This course introduces Python as a versatile programming language for geoscience applications. Designed for graduate students with no prior programming experience, it covers core programming concepts and progresses to advanced techniques for handling and analyzing structured geoscience datasets. Topics include variables, data structures, control flow, functions, NumPy, Pandas, time series analysis, object-oriented programming, and scientific visualization with Cartopy and Seaborn.
 
+## Run in Google Colab
+
+Every module is available as a Colab-ready notebook with zero setup. See [`colab/README.md`](colab/README.md) for the full list of **Open in Colab** links. Click any link to launch the notebook in your browser — no local Python installation required.
+
 ## Modules
 
 | Module | Topic | Lecture Notebook | Assignment |

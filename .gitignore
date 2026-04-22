@@ -23,3 +23,8 @@ __pycache__/
 
 # Jupyter Book build
 _build/
+
+# Colab tester artifacts
+colab/test_report.md
+tools/.colab_venv/
+.pytest_cache/

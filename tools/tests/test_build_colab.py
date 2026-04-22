@@ -1,0 +1,309 @@
+import nbformat
+
+from tools.build_colab import (
+    build_raw_url,
+    build_colab_open_url,
+    rewrite_code_string_paths,
+    rewrite_markdown_paths,
+    strip_widgets_metadata,
+    clear_outputs,
+    build_header_cell,
+    build_cartopy_install_cell,
+    transform_notebook,
+    collect_referenced_paths,
+    validate_references,
+    build_landing_page,
+    MODULES,
+)
+
+import pytest
+
+
+def test_build_raw_url_data_file():
+    assert build_raw_url(7, "data/earthquake.txt") == (
+        "https://raw.githubusercontent.com/ixnix/GE5280PythonGeosciences/"
+        "main/module_7/data/earthquake.txt"
+    )
+
+
+def test_build_raw_url_img_file():
+    assert build_raw_url(1, "img/filesystem.png") == (
+        "https://raw.githubusercontent.com/ixnix/GE5280PythonGeosciences/"
+        "main/module_1/img/filesystem.png"
+    )
+
+
+def test_build_colab_open_url():
+    assert build_colab_open_url(13, "13_Cartopy.ipynb") == (
+        "https://colab.research.google.com/github/ixnix/"
+        "GE5280PythonGeosciences/blob/main/colab/module_13/13_Cartopy.ipynb"
+    )
+
+
+def test_rewrite_double_quoted_data_path():
+    src = 'df = pd.read_csv("data/earthquake.txt")'
+    out = rewrite_code_string_paths(src, module=6)
+    assert out == (
+        'df = pd.read_csv("https://raw.githubusercontent.com/ixnix/'
+        'GE5280PythonGeosciences/main/module_6/data/earthquake.txt")'
+    )
+
+
+def test_rewrite_single_quoted_img_path():
+    src = "Image(filename='img/foo.png')"
+    out = rewrite_code_string_paths(src, module=1)
+    assert "module_1/img/foo.png" in out
+    assert "'https://raw" in out
+
+
+def test_rewrite_leaves_unrelated_strings_alone():
+    src = "x = 'hello world'\nfn = 'output.csv'"
+    out = rewrite_code_string_paths(src, module=7)
+    assert out == src
+
+
+def test_rewrite_leaves_writes_and_non_data_paths_alone():
+    src = 'with open("output.csv", "w") as f: pass'
+    out = rewrite_code_string_paths(src, module=7)
+    assert out == src
+
+
+def test_rewrite_handles_nested_subdirs():
+    src = "x = 'data/sub/nested.csv'"
+    out = rewrite_code_string_paths(src, module=8)
+    assert "module_8/data/sub/nested.csv" in out
+
+
+def test_rewrite_multiple_occurrences():
+    src = 'a = "data/one.csv"; b = "img/two.png"'
+    out = rewrite_code_string_paths(src, module=9)
+    assert "module_9/data/one.csv" in out
+    assert "module_9/img/two.png" in out
+
+
+def test_rewrite_markdown_image():
+    src = "Here's a picture:\n\n![diagram](img/foo.png)\n"
+    out = rewrite_markdown_paths(src, module=7)
+    assert "module_7/img/foo.png" in out
+    assert "![diagram](https://raw" in out
+
+
+def test_rewrite_markdown_data_link():
+    src = "See [data](data/things.csv) for details."
+    out = rewrite_markdown_paths(src, module=8)
+    assert "module_8/data/things.csv" in out
+
+
+def test_rewrite_html_img_tag_double_quoted():
+    src = '<img src="img/bar.jpg" width="300">'
+    out = rewrite_markdown_paths(src, module=1)
+    assert 'src="https://raw' in out
+    assert "module_1/img/bar.jpg" in out
+
+
+def test_rewrite_html_img_tag_single_quoted():
+    src = "<img src='img/bar.jpg'>"
+    out = rewrite_markdown_paths(src, module=1)
+    assert "src='https://raw" in out
+
+
+def test_rewrite_markdown_leaves_prose_alone():
+    src = "The data/ folder contains CSV files."
+    out = rewrite_markdown_paths(src, module=7)
+    assert out == src
+
+
+def _nb_with_widgets():
+    nb = nbformat.v4.new_notebook()
+    nb.metadata["widgets"] = {"application/vnd.jupyter.widget-state+json": {}}
+    return nb
+
+
+def test_strip_widgets_removes_key():
+    nb = _nb_with_widgets()
+    strip_widgets_metadata(nb)
+    assert "widgets" not in nb.metadata
+
+
+def test_strip_widgets_no_op_if_absent():
+    nb = nbformat.v4.new_notebook()
+    strip_widgets_metadata(nb)
+    assert "widgets" not in nb.metadata
+
+
+def test_clear_outputs_empties_code_cell_outputs():
+    nb = nbformat.v4.new_notebook()
+    cell = nbformat.v4.new_code_cell("print('hi')")
+    cell.outputs = [nbformat.v4.new_output("stream", name="stdout", text="hi\n")]
+    cell.execution_count = 3
+    nb.cells.append(cell)
+    clear_outputs(nb)
+    assert nb.cells[0].outputs == []
+    assert nb.cells[0].execution_count is None
+
+
+def test_header_cell_is_markdown():
+    cell = build_header_cell(module=7, notebook_name="7_PandasDataStructure.ipynb",
+                             title="Pandas Data Structures")
+    assert cell.cell_type == "markdown"
+
+
+def test_header_cell_contains_title():
+    cell = build_header_cell(module=7, notebook_name="7_PandasDataStructure.ipynb",
+                             title="Pandas Data Structures")
+    assert "# Pandas Data Structures" in cell.source
+
+
+def test_header_cell_contains_colab_badge():
+    cell = build_header_cell(module=13, notebook_name="13_Cartopy.ipynb",
+                             title="Cartopy")
+    assert "colab.research.google.com/github/ixnix/" in cell.source
+    assert "colab/module_13/13_Cartopy.ipynb" in cell.source
+    assert "colab-badge.svg" in cell.source
+
+
+def test_header_cell_mentions_zero_setup():
+    cell = build_header_cell(module=1, notebook_name="1_Overview.ipynb",
+                             title="Course Overview")
+    assert "Google Colab" in cell.source
+
+
+def test_cartopy_install_cell_is_code():
+    cell = build_cartopy_install_cell()
+    assert cell.cell_type == "code"
+
+
+def test_cartopy_install_cell_runs_pip():
+    cell = build_cartopy_install_cell()
+    assert "!pip install" in cell.source
+    assert "cartopy" in cell.source
+
+
+def test_transform_notebook_end_to_end(sample_notebook_path, tmp_path):
+    dest = tmp_path / "out.ipynb"
+    transform_notebook(
+        source=sample_notebook_path,
+        dest=dest,
+        module=7,
+        notebook_name="out.ipynb",
+        title="Sample Lecture",
+        include_cartopy_install=False,
+    )
+
+    nb = nbformat.read(dest, as_version=4)
+
+    assert nb.cells[0].cell_type == "markdown"
+    assert "# Sample Lecture" in nb.cells[0].source
+    assert "colab.research.google.com" in nb.cells[0].source
+
+    assert "!pip install" not in nb.cells[1].source
+
+    all_src = "\n".join(c.source for c in nb.cells)
+    assert "raw.githubusercontent.com/ixnix/GE5280PythonGeosciences" in all_src
+    assert '"output.csv"' in all_src
+
+    for cell in nb.cells:
+        if cell.cell_type == "code":
+            assert cell.outputs == []
+            assert cell.execution_count is None
+
+    assert "widgets" not in nb.metadata
+
+
+def test_transform_notebook_with_cartopy(sample_notebook_path, tmp_path):
+    dest = tmp_path / "out.ipynb"
+    transform_notebook(
+        source=sample_notebook_path,
+        dest=dest,
+        module=13,
+        notebook_name="out.ipynb",
+        title="Cartopy",
+        include_cartopy_install=True,
+    )
+    nb = nbformat.read(dest, as_version=4)
+    assert nb.cells[1].cell_type == "code"
+    assert "!pip install -q cartopy" in nb.cells[1].source
+
+
+def test_collect_references_finds_code_and_markdown_paths(sample_notebook_path):
+    refs = collect_referenced_paths(sample_notebook_path)
+    assert "data/things.csv" in refs
+    assert "img/foo.png" in refs
+    assert "img/bar.jpg" in refs
+    assert "img/baz.png" in refs
+    assert "output.csv" not in refs
+
+
+def test_validate_references_raises_on_missing(tmp_path):
+    module_dir = tmp_path / "module_7"
+    (module_dir / "data").mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="module_7.*missing.csv"):
+        validate_references({"data/missing.csv"}, module_dir)
+
+
+def test_validate_references_passes_when_present(tmp_path):
+    module_dir = tmp_path / "module_7"
+    (module_dir / "data").mkdir(parents=True)
+    (module_dir / "data" / "x.csv").write_text("")
+    validate_references({"data/x.csv"}, module_dir)
+
+
+def test_modules_list_is_complete():
+    assert len(MODULES) == 14
+    assert MODULES[0]["number"] == 1
+    assert MODULES[13]["number"] == 14
+
+
+def test_landing_page_has_all_modules():
+    md = build_landing_page()
+    for i in range(1, 15):
+        assert f"module_{i}/" in md
+
+
+def test_landing_page_has_open_in_colab_links():
+    md = build_landing_page()
+    assert md.count("colab.research.google.com/github/ixnix") >= 28
+    assert "colab/module_13/13_Cartopy.ipynb" in md
+
+
+def test_landing_page_mentions_syllabus():
+    md = build_landing_page()
+    assert "Syllabus.ipynb" in md
+
+
+import subprocess
+import sys
+from pathlib import Path
+from tools.build_colab import build_all
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_build_all_produces_expected_files(tmp_path):
+    build_all(
+        repo_root=REPO_ROOT,
+        output_dir=tmp_path,
+        only_module=None,
+    )
+    assert (tmp_path / "README.md").exists()
+    for m in MODULES:
+        num = m["number"]
+        assert (tmp_path / f"module_{num}" / m["lecture"]).exists()
+        assert (tmp_path / f"module_{num}" / f"Assignment_{num}.ipynb").exists()
+    assert (tmp_path / "module_1" / "Syllabus.ipynb").exists()
+
+
+def test_build_all_only_module(tmp_path):
+    build_all(repo_root=REPO_ROOT, output_dir=tmp_path, only_module=2)
+    assert (tmp_path / "module_2" / "2_Variables.ipynb").exists()
+    assert not (tmp_path / "module_3").exists()
+
+
+def test_cli_dry_run_writes_nothing(tmp_path):
+    result = subprocess.run(
+        [sys.executable, "-m", "tools.build_colab",
+         "--dry-run", "--output-dir", str(tmp_path)],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert not any(tmp_path.iterdir())
