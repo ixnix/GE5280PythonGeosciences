@@ -231,3 +231,91 @@ def build_landing_page() -> str:
             )
     lines.append("")
     return "\n".join(lines)
+
+
+import argparse
+import shutil
+import sys
+
+
+def _lecture_notebooks_for(module):
+    """Return list of (notebook_name, title, include_cartopy) tuples
+    for one module. Covers lecture, extras (e.g., Syllabus), and assignment."""
+    num = module["number"]
+    include_cartopy = (num == 13)
+    items = []
+    items.append((module["lecture"], module["title"], include_cartopy))
+    for extra in module.get("extras", []):
+        items.append((extra, extra.replace(".ipynb", ""), include_cartopy))
+    assignment = f"Assignment_{num}.ipynb"
+    items.append((assignment, f"Assignment {num}: {module['title']}",
+                  include_cartopy))
+    return items
+
+
+def build_all(repo_root: Path, output_dir: Path, only_module) -> None:
+    """Generate all Colab copies. If output_dir exists, it is replaced."""
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True)
+
+    for module in MODULES:
+        num = module["number"]
+        if only_module is not None and num != only_module:
+            continue
+        source_module_dir = repo_root / f"module_{num}"
+        dest_module_dir = output_dir / f"module_{num}"
+        dest_module_dir.mkdir(parents=True, exist_ok=True)
+
+        for notebook_name, title, include_cartopy in _lecture_notebooks_for(module):
+            source = source_module_dir / notebook_name
+            if not source.exists():
+                raise FileNotFoundError(f"Expected notebook missing: {source}")
+            refs = collect_referenced_paths(source)
+            validate_references(refs, source_module_dir)
+            transform_notebook(
+                source=source,
+                dest=dest_module_dir / notebook_name,
+                module=num,
+                notebook_name=notebook_name,
+                title=title,
+                include_cartopy_install=include_cartopy,
+            )
+
+    (output_dir / "README.md").write_text(build_landing_page())
+
+
+def _parse_args(argv):
+    p = argparse.ArgumentParser(description="Generate Colab-ready notebook copies.")
+    p.add_argument("--module", type=int, default=None,
+                   help="Only rebuild this module (1-14).")
+    p.add_argument("--output-dir", type=Path, default=Path("colab"),
+                   help="Where to write output (default: ./colab).")
+    p.add_argument("--dry-run", action="store_true",
+                   help="List planned actions, write nothing.")
+    return p.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = _parse_args(argv if argv is not None else sys.argv[1:])
+    repo_root = Path.cwd()
+
+    if args.dry_run:
+        print(f"[dry-run] Would write output to: {args.output_dir}")
+        for module in MODULES:
+            num = module["number"]
+            if args.module is not None and num != args.module:
+                continue
+            for notebook_name, _, _ in _lecture_notebooks_for(module):
+                print(f"[dry-run]   module_{num}/{notebook_name}")
+        print("[dry-run] Would write README.md landing page.")
+        return 0
+
+    build_all(repo_root=repo_root, output_dir=args.output_dir,
+              only_module=args.module)
+    print(f"Wrote Colab copies to {args.output_dir}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
