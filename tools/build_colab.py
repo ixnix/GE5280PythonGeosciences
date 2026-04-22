@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import nbformat
 
@@ -104,3 +105,32 @@ def build_header_cell(module: int, notebook_name: str, title: str):
 def build_cartopy_install_cell():
     """Build the code cell that installs cartopy — used for module 13 only."""
     return nbformat.v4.new_code_cell("!pip install -q cartopy")
+
+
+def transform_notebook(
+    source: Path,
+    dest: Path,
+    module: int,
+    notebook_name: str,
+    title: str,
+    include_cartopy_install: bool,
+) -> None:
+    """Read a source notebook, apply all Colab transforms, write to dest."""
+    nb = nbformat.read(source, as_version=4)
+
+    for cell in nb.cells:
+        if cell.cell_type == "code":
+            cell.source = rewrite_code_string_paths(cell.source, module)
+        elif cell.cell_type == "markdown":
+            cell.source = rewrite_markdown_paths(cell.source, module)
+
+    strip_widgets_metadata(nb)
+    clear_outputs(nb)
+
+    injected = [build_header_cell(module, notebook_name, title)]
+    if include_cartopy_install:
+        injected.append(build_cartopy_install_cell())
+    nb.cells = injected + nb.cells
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    nbformat.write(nb, dest)

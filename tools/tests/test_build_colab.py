@@ -9,6 +9,7 @@ from tools.build_colab import (
     clear_outputs,
     build_header_cell,
     build_cartopy_install_cell,
+    transform_notebook,
 )
 
 
@@ -170,3 +171,49 @@ def test_cartopy_install_cell_runs_pip():
     cell = build_cartopy_install_cell()
     assert "!pip install" in cell.source
     assert "cartopy" in cell.source
+
+
+def test_transform_notebook_end_to_end(sample_notebook_path, tmp_path):
+    dest = tmp_path / "out.ipynb"
+    transform_notebook(
+        source=sample_notebook_path,
+        dest=dest,
+        module=7,
+        notebook_name="out.ipynb",
+        title="Sample Lecture",
+        include_cartopy_install=False,
+    )
+
+    nb = nbformat.read(dest, as_version=4)
+
+    assert nb.cells[0].cell_type == "markdown"
+    assert "# Sample Lecture" in nb.cells[0].source
+    assert "colab.research.google.com" in nb.cells[0].source
+
+    assert "!pip install" not in nb.cells[1].source
+
+    all_src = "\n".join(c.source for c in nb.cells)
+    assert "raw.githubusercontent.com/ixnix/GE5280PythonGeosciences" in all_src
+    assert '"output.csv"' in all_src
+
+    for cell in nb.cells:
+        if cell.cell_type == "code":
+            assert cell.outputs == []
+            assert cell.execution_count is None
+
+    assert "widgets" not in nb.metadata
+
+
+def test_transform_notebook_with_cartopy(sample_notebook_path, tmp_path):
+    dest = tmp_path / "out.ipynb"
+    transform_notebook(
+        source=sample_notebook_path,
+        dest=dest,
+        module=13,
+        notebook_name="out.ipynb",
+        title="Cartopy",
+        include_cartopy_install=True,
+    )
+    nb = nbformat.read(dest, as_version=4)
+    assert nb.cells[1].cell_type == "code"
+    assert "!pip install -q cartopy" in nb.cells[1].source
