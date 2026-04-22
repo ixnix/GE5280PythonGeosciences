@@ -30,6 +30,12 @@ def build_colab_open_url(module: int, notebook_name: str) -> str:
 
 _PATH_RE = re.compile(r"""(['"])(data|img)/([^'"\s]+)\1""")
 
+# After URL rewrite: Image(filename="https://...") → Image(url="https://...").
+# IPython's Image.filename opens a local file; for remote URLs, use url=.
+_IMAGE_FILENAME_RE = re.compile(
+    r"""(Image\s*\(\s*)filename(\s*=\s*)(['"])(https?://)""",
+)
+
 
 def rewrite_code_string_paths(source: str, module: int) -> str:
     """Rewrite every 'data/...' or 'img/...' string literal in source code
@@ -39,13 +45,18 @@ def rewrite_code_string_paths(source: str, module: int) -> str:
     unrelated strings like 'output.csv' or 'hello world' are untouched.
     Colab's CWD is /content, so relative-path writes continue to work
     without rewriting.
+
+    After URL rewriting, IPython.display.Image(filename=<url>) is converted
+    to Image(url=<url>); filename= only works for local files.
     """
     def _sub(m: "re.Match") -> str:
         quote, subdir, rest = m.group(1), m.group(2), m.group(3)
         url = build_raw_url(module, f"{subdir}/{rest}")
         return f"{quote}{url}{quote}"
 
-    return _PATH_RE.sub(_sub, source)
+    out = _PATH_RE.sub(_sub, source)
+    out = _IMAGE_FILENAME_RE.sub(r"\1url\2\3\4", out)
+    return out
 
 
 _MD_IMAGE_RE = re.compile(r"""(\!?\[[^\]]*\])\((data|img)/([^\s)]+)\)""")

@@ -307,3 +307,23 @@ def test_cli_dry_run_writes_nothing(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert not any(tmp_path.iterdir())
+
+
+def test_rewrite_converts_image_filename_to_url():
+    src = "Image(filename='img/foo.png',width=500)"
+    out = rewrite_code_string_paths(src, module=7)
+    assert "Image(url='https://raw" in out
+    assert "filename=" not in out
+
+
+def test_rewrite_converts_image_filename_double_quoted():
+    src = 'Image(filename="img/bar.png")'
+    out = rewrite_code_string_paths(src, module=8)
+    assert 'Image(url="https://raw' in out
+
+
+def test_rewrite_preserves_filename_for_local_paths():
+    # Should only swap filename→url when path is data/ or img/ (which becomes URL).
+    src = "Image(filename='output.csv')"
+    out = rewrite_code_string_paths(src, module=7)
+    assert out == src
