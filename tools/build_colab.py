@@ -134,3 +134,30 @@ def transform_notebook(
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     nbformat.write(nb, dest)
+
+
+def collect_referenced_paths(source: Path) -> set:
+    """Scan a notebook for every 'data/...' or 'img/...' string/link.
+    Returns a set of relative paths (e.g., {'data/foo.csv', 'img/bar.png'})."""
+    nb = nbformat.read(source, as_version=4)
+    refs: set = set()
+    for cell in nb.cells:
+        src = cell.source
+        if cell.cell_type == "code":
+            for m in _PATH_RE.finditer(src):
+                refs.add(f"{m.group(2)}/{m.group(3)}")
+        elif cell.cell_type == "markdown":
+            for m in _MD_IMAGE_RE.finditer(src):
+                refs.add(f"{m.group(2)}/{m.group(3)}")
+            for m in _HTML_IMG_RE.finditer(src):
+                refs.add(f"{m.group(3)}/{m.group(4)}")
+    return refs
+
+
+def validate_references(refs, module_dir: Path) -> None:
+    """Raise FileNotFoundError if any referenced path is missing on disk."""
+    missing = [r for r in refs if not (module_dir / r).exists()]
+    if missing:
+        raise FileNotFoundError(
+            f"{module_dir}: referenced file(s) missing: {sorted(missing)}"
+        )
