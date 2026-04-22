@@ -44,3 +44,13 @@ def check_url_reachable(url: str, *, timeout: float = 10.0) -> bool:
             if attempt == 1:
                 return False
     return False
+
+
+def looks_like_private_repo(results) -> bool:
+    """Given [(url, reachable), ...] results, return True if a majority of
+    raw.githubusercontent.com URLs failed — the signature of a private repo."""
+    raw = [ok for url, ok in results if "raw.githubusercontent.com" in url]
+    if not raw:
+        return False
+    failures = sum(1 for ok in raw if not ok)
+    return failures > len(raw) / 2
