@@ -1,8 +1,12 @@
+import nbformat
+
 from tools.build_colab import (
     build_raw_url,
     build_colab_open_url,
     rewrite_code_string_paths,
     rewrite_markdown_paths,
+    strip_widgets_metadata,
+    clear_outputs,
 )
 
 
@@ -98,3 +102,32 @@ def test_rewrite_markdown_leaves_prose_alone():
     src = "The data/ folder contains CSV files."
     out = rewrite_markdown_paths(src, module=7)
     assert out == src
+
+
+def _nb_with_widgets():
+    nb = nbformat.v4.new_notebook()
+    nb.metadata["widgets"] = {"application/vnd.jupyter.widget-state+json": {}}
+    return nb
+
+
+def test_strip_widgets_removes_key():
+    nb = _nb_with_widgets()
+    strip_widgets_metadata(nb)
+    assert "widgets" not in nb.metadata
+
+
+def test_strip_widgets_no_op_if_absent():
+    nb = nbformat.v4.new_notebook()
+    strip_widgets_metadata(nb)
+    assert "widgets" not in nb.metadata
+
+
+def test_clear_outputs_empties_code_cell_outputs():
+    nb = nbformat.v4.new_notebook()
+    cell = nbformat.v4.new_code_cell("print('hi')")
+    cell.outputs = [nbformat.v4.new_output("stream", name="stdout", text="hi\n")]
+    cell.execution_count = 3
+    nb.cells.append(cell)
+    clear_outputs(nb)
+    assert nb.cells[0].outputs == []
+    assert nb.cells[0].execution_count is None
