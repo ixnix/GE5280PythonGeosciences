@@ -118,6 +118,18 @@ def build_cartopy_install_cell():
     return nbformat.v4.new_code_cell("!pip install -q cartopy")
 
 
+import hashlib
+
+
+def _assign_stable_ids(nb, module: int, notebook_name: str) -> None:
+    """Give each cell a deterministic id derived from (module, name, index,
+    source). Prevents cell-ID churn: unchanged cells keep the same id across
+    regenerations, so git diffs stay minimal."""
+    for i, cell in enumerate(nb.cells):
+        seed = f"{module}|{notebook_name}|{i}|{cell.source}"
+        cell.id = hashlib.sha1(seed.encode()).hexdigest()[:12]
+
+
 def transform_notebook(
     source: Path,
     dest: Path,
@@ -142,6 +154,8 @@ def transform_notebook(
     if include_cartopy_install:
         injected.append(build_cartopy_install_cell())
     nb.cells = injected + nb.cells
+
+    _assign_stable_ids(nb, module, notebook_name)
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     nbformat.write(nb, dest)
@@ -265,10 +279,23 @@ def _lecture_notebooks_for(module):
 
 
 def build_all(repo_root: Path, output_dir: Path, only_module) -> None:
-    """Generate all Colab copies. If output_dir exists, it is replaced."""
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
+    """Generate Colab copies.
+
+    On full rebuild (only_module is None): output_dir is deleted and
+    regenerated from scratch, and the README landing page is regenerated.
+
+    On incremental rebuild (only_module is an int): only the matching
+    module_N/ subdirectory is wiped and regenerated. Other modules and
+    the README are left in place."""
+    if only_module is None:
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+        output_dir.mkdir(parents=True)
+    else:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        target = output_dir / f"module_{only_module}"
+        if target.exists():
+            shutil.rmtree(target)
 
     for module in MODULES:
         num = module["number"]
@@ -293,7 +320,8 @@ def build_all(repo_root: Path, output_dir: Path, only_module) -> None:
                 include_cartopy_install=include_cartopy,
             )
 
-    (output_dir / "README.md").write_text(build_landing_page())
+    if only_module is None:
+        (output_dir / "README.md").write_text(build_landing_page())
 
 
 def _parse_args(argv):

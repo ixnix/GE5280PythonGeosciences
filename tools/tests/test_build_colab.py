@@ -327,3 +327,27 @@ def test_rewrite_preserves_filename_for_local_paths():
     src = "Image(filename='output.csv')"
     out = rewrite_code_string_paths(src, module=7)
     assert out == src
+
+
+def test_build_all_only_module_preserves_other_modules(tmp_path):
+    # Pre-populate with a dummy "existing" module we should NOT touch.
+    other = tmp_path / "module_99"
+    other.mkdir()
+    (other / "dummy.txt").write_text("I should survive incremental rebuild")
+    # Also pre-populate an existing README the incremental run must leave alone.
+    (tmp_path / "README.md").write_text("pre-existing landing page")
+
+    build_all(repo_root=REPO_ROOT, output_dir=tmp_path, only_module=2)
+
+    assert (tmp_path / "module_2" / "2_Variables.ipynb").exists()
+    assert (other / "dummy.txt").exists()
+    assert (tmp_path / "README.md").read_text() == "pre-existing landing page"
+
+
+def test_stable_ids_do_not_change_across_regenerations(tmp_path):
+    build_all(repo_root=REPO_ROOT, output_dir=tmp_path / "first", only_module=2)
+    build_all(repo_root=REPO_ROOT, output_dir=tmp_path / "second", only_module=2)
+    import nbformat
+    a = nbformat.read(tmp_path / "first" / "module_2" / "2_Variables.ipynb", as_version=4)
+    b = nbformat.read(tmp_path / "second" / "module_2" / "2_Variables.ipynb", as_version=4)
+    assert [c.id for c in a.cells] == [c.id for c in b.cells]
