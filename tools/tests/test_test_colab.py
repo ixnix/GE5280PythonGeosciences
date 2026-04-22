@@ -2,7 +2,7 @@ from unittest.mock import patch, Mock
 
 import nbformat
 from pathlib import Path
-from tools.test_colab import extract_urls, check_url_reachable
+from tools.test_colab import extract_urls, check_url_reachable, looks_like_private_repo
 
 
 def test_extract_urls_from_code_cell(tmp_path):
@@ -68,3 +68,30 @@ def test_check_url_retries_once_on_exception():
     with patch("tools.test_colab.requests.head", side_effect=side_effects) as mhead:
         assert check_url_reachable("https://x/y.csv") is True
         assert mhead.call_count == 2
+
+
+def test_private_repo_banner_triggers_when_majority_raw_404():
+    results = [
+        ("https://raw.githubusercontent.com/x/y/main/a", False),
+        ("https://raw.githubusercontent.com/x/y/main/b", False),
+        ("https://raw.githubusercontent.com/x/y/main/c", False),
+        ("https://colab.research.google.com/github/x/y/blob/main/a", True),
+    ]
+    assert looks_like_private_repo(results) is True
+
+
+def test_private_repo_banner_does_not_trigger_when_most_pass():
+    results = [
+        ("https://raw.githubusercontent.com/x/y/main/a", True),
+        ("https://raw.githubusercontent.com/x/y/main/b", True),
+        ("https://raw.githubusercontent.com/x/y/main/c", False),
+    ]
+    assert looks_like_private_repo(results) is False
+
+
+def test_private_repo_banner_ignores_non_raw_urls():
+    results = [
+        ("https://example.com/a", False),
+        ("https://example.com/b", False),
+    ]
+    assert looks_like_private_repo(results) is False
