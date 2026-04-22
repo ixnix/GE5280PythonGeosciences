@@ -139,3 +139,81 @@ def format_report(url_results, exec_results) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+import argparse
+
+
+def _find_notebooks(colab_dir: Path, only_module):
+    if only_module is not None:
+        return sorted((colab_dir / f"module_{only_module}").glob("*.ipynb"))
+    out = []
+    for module_dir in sorted(colab_dir.glob("module_*")):
+        out.extend(sorted(module_dir.glob("*.ipynb")))
+    return out
+
+
+def _parse_args(argv):
+    p = argparse.ArgumentParser(description="Test Colab-ready notebooks.")
+    p.add_argument("--colab-dir", type=Path, default=Path("colab"))
+    p.add_argument("--venv-dir", type=Path, default=Path("tools/.colab_venv"))
+    p.add_argument("--requirements", type=Path,
+                   default=Path("tools/colab_requirements.txt"))
+    p.add_argument("--urls-only", action="store_true")
+    p.add_argument("--exec-only", action="store_true")
+    p.add_argument("--module", type=int, default=None)
+    p.add_argument("--timeout", type=int, default=120)
+    return p.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = _parse_args(argv if argv is not None else _sys.argv[1:])
+    notebooks = _find_notebooks(args.colab_dir, args.module)
+    if not notebooks:
+        print(f"No notebooks found under {args.colab_dir}.")
+        return 1
+
+    url_results = []
+    exec_results = []
+    any_fail = False
+
+    if not args.exec_only:
+        print(f"Checking URLs in {len(notebooks)} notebooks...")
+        all_urls = []
+        for nb in notebooks:
+            all_urls.extend(extract_urls(nb))
+        seen = set()
+        unique = [u for u in all_urls if not (u in seen or seen.add(u))]
+        for url in unique:
+            ok = check_url_reachable(url)
+            url_results.append((url, ok))
+            if not ok:
+                any_fail = True
+                print(f"  FAIL {url}")
+        if looks_like_private_repo(url_results):
+            print(
+                "\n!! Most raw.githubusercontent.com URLs 404'd. "
+                "The repo may still be private — make it public, or URL "
+                "checks will always fail.\n"
+            )
+
+    if not args.urls_only:
+        python = ensure_venv(args.venv_dir, args.requirements)
+        print(f"Executing {len(notebooks)} notebooks in {python}...")
+        for nb in notebooks:
+            print(f"  Running {nb}")
+            res = execute_notebook(nb, python=python, timeout=args.timeout)
+            exec_results.append(res)
+            if not res.ok:
+                any_fail = True
+                print(f"  FAIL {nb}: {res.error}")
+
+    report = format_report(url_results, exec_results)
+    report_path = args.colab_dir / "test_report.md"
+    report_path.write_text(report)
+    print(f"Wrote report to {report_path}")
+    return 1 if any_fail else 0
+
+
+if __name__ == "__main__":
+    _sys.exit(main())
