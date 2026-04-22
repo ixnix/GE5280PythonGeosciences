@@ -10,7 +10,11 @@ from tools.build_colab import (
     build_header_cell,
     build_cartopy_install_cell,
     transform_notebook,
+    collect_referenced_paths,
+    validate_references,
 )
+
+import pytest
 
 
 def test_build_raw_url_data_file():
@@ -217,3 +221,26 @@ def test_transform_notebook_with_cartopy(sample_notebook_path, tmp_path):
     nb = nbformat.read(dest, as_version=4)
     assert nb.cells[1].cell_type == "code"
     assert "!pip install -q cartopy" in nb.cells[1].source
+
+
+def test_collect_references_finds_code_and_markdown_paths(sample_notebook_path):
+    refs = collect_referenced_paths(sample_notebook_path)
+    assert "data/things.csv" in refs
+    assert "img/foo.png" in refs
+    assert "img/bar.jpg" in refs
+    assert "img/baz.png" in refs
+    assert "output.csv" not in refs
+
+
+def test_validate_references_raises_on_missing(tmp_path):
+    module_dir = tmp_path / "module_7"
+    (module_dir / "data").mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="module_7.*missing.csv"):
+        validate_references({"data/missing.csv"}, module_dir)
+
+
+def test_validate_references_passes_when_present(tmp_path):
+    module_dir = tmp_path / "module_7"
+    (module_dir / "data").mkdir(parents=True)
+    (module_dir / "data" / "x.csv").write_text("")
+    validate_references({"data/x.csv"}, module_dir)
