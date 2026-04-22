@@ -4,8 +4,8 @@ Two scripts generate and test Colab-ready copies of the course notebooks.
 
 ## Prerequisites
 
-- Python 3.9+ (the course author uses miniconda base)
-- `pip install -r tools/dev_requirements.txt` in your main environment
+- **Python 3.11+ for `test_colab.py`** — the Colab-like venv pins scipy/pandas/matplotlib versions that require 3.10+, and cartopy wheels need 3.11+. Run the tester with a 3.11+ interpreter, e.g. `~/miniconda3/envs/pythongis/bin/python -m tools.test_colab`. The generator itself works on any 3.9+.
+- `pip install -r tools/dev_requirements.txt` in your main environment (for the generator and unit tests)
 - Internet access (for URL checks and venv install)
 - **The repo must be public on GitHub** — Colab can only open and `raw.githubusercontent.com` can only serve public repos without extra auth.
 
@@ -56,6 +56,13 @@ python -m tools.test_colab --module 13
 
 Results are written to `colab/test_report.md`. Exit code is nonzero if
 any check failed.
+
+By default the tester passes `--allow-errors` to nbconvert because several
+lecture notebooks intentionally demonstrate Python errors as teaching
+examples (e.g., `int + str` raising TypeError in module 2). The tester
+verifies "does the notebook run end-to-end" — individual in-cell errors
+are preserved in the output for you to review. Use `--strict` to fail on
+any in-cell error.
 
 ## The Colab-like venv
 

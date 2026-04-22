@@ -95,17 +95,27 @@ class ExecutionResult:
     error: str
 
 
-def execute_notebook(notebook: Path, *, python: Path, timeout: int) -> ExecutionResult:
+def execute_notebook(notebook: Path, *, python: Path, timeout: int,
+                     allow_errors: bool = True) -> ExecutionResult:
     """Run a notebook with `nbconvert --execute` using the given python.
-    Returns ExecutionResult(ok, error)."""
+    Returns ExecutionResult(ok, error).
+
+    allow_errors defaults to True because lecture notebooks in a teaching
+    course often include intentional Python errors as examples (e.g.,
+    demonstrating int + str raises TypeError). With allow_errors=True, the
+    tester verifies the notebook runs end-to-end; individual in-cell errors
+    are preserved in the output notebook for the author to review.
+    """
     cmd = [
         str(python), "-m", "nbconvert",
         "--to", "notebook",
         "--execute",
         "--output", f"/tmp/exec_{notebook.stem}.ipynb",
         f"--ExecutePreprocessor.timeout={timeout}",
-        str(notebook),
     ]
+    if allow_errors:
+        cmd.append("--ExecutePreprocessor.allow_errors=True")
+    cmd.append(str(notebook))
     completed = subprocess.run(cmd, capture_output=True, text=True)
     if completed.returncode == 0:
         return ExecutionResult(notebook=notebook, ok=True, error="")
@@ -163,6 +173,9 @@ def _parse_args(argv):
     p.add_argument("--exec-only", action="store_true")
     p.add_argument("--module", type=int, default=None)
     p.add_argument("--timeout", type=int, default=120)
+    p.add_argument("--strict", action="store_true",
+                   help="Fail on any in-cell error (including intentional "
+                        "teaching errors). Off by default.")
     return p.parse_args(argv)
 
 
@@ -202,7 +215,8 @@ def main(argv=None) -> int:
         print(f"Executing {len(notebooks)} notebooks in {python}...")
         for nb in notebooks:
             print(f"  Running {nb}")
-            res = execute_notebook(nb, python=python, timeout=args.timeout)
+            res = execute_notebook(nb, python=python, timeout=args.timeout,
+                                   allow_errors=not args.strict)
             exec_results.append(res)
             if not res.ok:
                 any_fail = True
