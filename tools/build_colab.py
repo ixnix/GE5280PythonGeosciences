@@ -99,3 +99,8 @@ def build_header_cell(module: int, notebook_name: str, title: str):
         "*Run this notebook on Google Colab — no setup required.*"
     )
     return nbformat.v4.new_markdown_cell(source)
+
+
+def build_cartopy_install_cell():
+    """Build the code cell that installs cartopy — used for module 13 only."""
+    return nbformat.v4.new_code_cell("!pip install -q cartopy")

@@ -8,6 +8,7 @@ from tools.build_colab import (
     strip_widgets_metadata,
     clear_outputs,
     build_header_cell,
+    build_cartopy_install_cell,
 )
 
 
@@ -158,3 +159,14 @@ def test_header_cell_mentions_zero_setup():
     cell = build_header_cell(module=1, notebook_name="1_Overview.ipynb",
                              title="Course Overview")
     assert "Google Colab" in cell.source
+
+
+def test_cartopy_install_cell_is_code():
+    cell = build_cartopy_install_cell()
+    assert cell.cell_type == "code"
+
+
+def test_cartopy_install_cell_runs_pip():
+    cell = build_cartopy_install_cell()
+    assert "!pip install" in cell.source
+    assert "cartopy" in cell.source
